@@ -1,10 +1,8 @@
 struct dungeon dungeon = {
-	{0, 0}, //offset
 	ROOM_START, //room id
-	{},
 	{EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY}, //npcs
 	dungeon_prepare,
-	print_room,
+	new_room,
 	show_dungeon
 };
 
@@ -12,20 +10,17 @@ void dungeon_prepare()
 {
 	generate_rooms();
 
-	print_room(ROOM_START, 0, DUN_Y/2);
+	new_room(ROOM_START, 0, DUN_Y/2);
 }
 
-void print_room(number)
+void new_room(number)
 int number;
 {
 	int y = 0;
 
 	struct room room = rooms[number];
 
-	while (y < room.y_size)
-	{
-		dungeon.map[y] = room.room[y++];
-	}
+	dungeon.room_id = number;
 
 	set_pos(player.pos, 1, room.door);
 
@@ -38,24 +33,18 @@ void show_dungeon()
 
 	clear();
 
-	for (y = 0; y < 25; ++y)
+	struct room room = rooms[dungeon.room_id];
+
+	for (y = 0; y < room.y_size; ++y)
 	{
-		mvaddstr(y, 0, dungeon.map[y]);
-
-		for (x = 0; y == player.pos[Y] && x < 25; ++x)
-		{
-			int pos[2] = {y, x};
-
-			if (pos_equal(player.pos, pos))
-			{
-				attron(COLOR_PAIR(COLOR_GREEN));
-				mvaddch(y, x, '@');
-				attroff(COLOR_PAIR(COLOR_GREEN));
-				refresh();
-				break;
-			}
-		}
+		mvprintw(y, 0, "%s", room.room[y]);
+		refresh();
 	}
+
+	attron(COLOR_PAIR(COLOR_GREEN));
+	mvprintw(player.pos[Y], player.pos[X], "%c", '@');
+	attroff(COLOR_PAIR(COLOR_GREEN));
+	refresh();
 
 	print_debug();
 

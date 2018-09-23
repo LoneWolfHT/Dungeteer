@@ -2,20 +2,21 @@ void random_move(pos)
 int *pos[];
 {
 	int possible[4] = {TRUE, TRUE, TRUE, TRUE};
+	struct room room = rooms[dungeon.room_id];
 	int to;
 
 	static int last = -1;
 
-	if (dungeon.map[*pos[Y]+1][*pos[X]] != ' ')
+	if (room.room[*pos[Y]+1][*pos[X]] != ' ')
 		possible[DOWN] = FALSE;
 
-	if (dungeon.map[*pos[Y]-1][*pos[X]] != ' ')
+	if (room.room[*pos[Y]-1][*pos[X]] != ' ')
 		possible[UP] = FALSE;
 
-	if (dungeon.map[*pos[Y]][*pos[X]+1] != ' ')
+	if (room.room[*pos[Y]][*pos[X]+1] != ' ')
 		possible[RIGHT] = FALSE;
 
-	if (dungeon.map[*pos[Y]][*pos[X]-1] != ' ')
+	if (room.room[*pos[Y]][*pos[X]-1] != ' ')
 		possible[LEFT] = FALSE;
 
 	while (1)
@@ -149,17 +150,18 @@ int *pos1[], pos2[];
 {
 					 /*Top, Bottom, Right, Left*/
 	int possible[4] = {TRUE, TRUE, TRUE, TRUE};
+	struct room room = rooms[dungeon.room_id];
 
-	if (dungeon.map[*pos1[Y]+1][*pos1[X]] != ' ')
+	if (room.room[*pos1[Y]+1][*pos1[X]] != ' ')
 		possible[DOWN] = FALSE;
 
-	if (dungeon.map[*pos1[Y]-1][*pos1[X]] != ' ')
+	if (room.room[*pos1[Y]-1][*pos1[X]] != ' ')
 		possible[UP] = FALSE;
 
-	if (dungeon.map[*pos1[Y]][*pos1[X]+1] != ' ')
+	if (room.room[*pos1[Y]][*pos1[X]+1] != ' ')
 		possible[RIGHT] = FALSE;
 
-	if (dungeon.map[*pos1[Y]][*pos1[X]-1] != ' ')
+	if (room.room[*pos1[Y]][*pos1[X]-1] != ' ')
 		possible[LEFT] = FALSE;
 
 	int x = setsign(pos1[X]-pos2[X], '+');

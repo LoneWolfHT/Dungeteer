@@ -54,9 +54,7 @@ struct player
 
 struct dungeon
 {
-	int offset[2];
 	int room_id;
-	char *map[25];
 	struct npc npcs[10];
 	void (*prepare)();
 	void (*new_room)();

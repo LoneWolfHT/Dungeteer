@@ -19,8 +19,9 @@
 #define WHITE_WHITE 15
 
 #define npc(num) dungeon.npcs[num]
-#define log(text) def_prog_mode(); endwin(); fprintf(stderr, "%s\n\n", text); reset_prog_mode(); refresh()
-#define error(text) def_prog_mode(); endwin(); fprintf(stderr, "\n[ERROR] %s\n\n", text); reset_prog_mode(); refresh()
+//#define log(text) def_prog_mode(); endwin(); fprintf(stderr, "%s\n\n", text); reset_prog_mode(); refresh()
+#define log(text) clear(); mvprintw(1, 0, "%s...", text); refresh()
+#define error(text) clear(); endwin(); printf("\n[ERROR] %s\n\n", text)
 
 int mrand(), getlen(), find(), setsign(), pos_equal();
 void game_load(), game_save(), map_save();
@@ -48,26 +49,26 @@ struct game game = {
 	game_save
 };
 
-void move_npcs(), dungeon_prepare(), generate_rooms(), print_room(), show_dungeon(), getroute(), random_move();
+void move_npcs(), dungeon_prepare(), generate_rooms(), new_room(), show_dungeon(), getroute(), random_move();
 int dist();
 
 int NPC_COUNT = 0;
 
-#define print_debug() mvprintw(0, 0, "%s Pos: {%d, %d}", player.name, player.pos[X], player.pos[Y])
+#define print_debug() mvprintw(11, 0, "%s Pos: {%d, %d} | Health: %d/%d", player.name, player.pos[X], player.pos[Y], player.hp, player.hp_max)
 #define set_pos(pos, x, y) pos[Y] = y; pos[X] = x
 
-#define getpos(pos) dungeon.map[pos[Y]][pos[X]]
-#define getpos_up(pos) dungeon.map[pos[Y]-1][pos[X]]
-#define getpos_down(pos) dungeon.map[pos[Y]+1][pos[X]]
-#define getpos_right(pos) dungeon.map[pos[Y]][pos[X]+1]
-#define getpos_left(pos) dungeon.map[pos[Y]][pos[X]-1]
+#define getpos(pos) room.room[pos[Y]][pos[X]]
+#define getpos_up(pos) room.room[pos[Y]-1][pos[X]]
+#define getpos_down(pos) room.room[pos[Y]+1][pos[X]]
+#define getpos_right(pos) room.room[pos[Y]][pos[X]+1]
+#define getpos_left(pos) room.room[pos[Y]][pos[X]-1]
 
 #define pos_up(pos) {pos[Y]-1, pos[X]}
 #define pos_down(pos) {pos[Y+1], pos[X]}
 #define pos_right(pos) {pos[Y], pos[X]+1}
 #define pos_left(pos) {pos[Y], pos[X]-1}
 
-#define RAND_ROOM mrand(0, ROOM_COUNT)
+#define RAND_ROOM mrand(0, ROOM_COUNT-1)
 
 #define DUN_X 50
 #define DUN_Y 50
@@ -111,8 +112,6 @@ void main()
 	time_t t;
 	srand((unsigned) time(&t));
 
-	log("Starting game...");
-
 	initscr();
  	echo();
  	start_color();
@@ -129,8 +128,6 @@ void main()
 
  	getmaxyx(stdscr, WIN_H, WIN_W);
 
-	log("Getting the player name");
-
 	mvprintw(WIN_H/2, WIN_W/2-18, "Please type in your character's name");
 	refresh();
 	move((WIN_H/2)+3, (WIN_W/2)-18);
@@ -140,7 +137,7 @@ void main()
 	system("mkdir ./players/");
 	system(add("mkdir ./players/", player.name, "/"));
 
-	if ((mapfile = fopen(add("players/", player.name, "/map.dtm"), "r")) == NULL)
+	if (fopen(add("players/", player.name, "/map.dtm"), "r") == NULL)
 	{
 		log("Preparing the dungeon");
 		dungeon.prepare();
@@ -148,23 +145,19 @@ void main()
 
 	log("Searching for save file");
 
-	playerfile = fopen(add("players/", player.name, "/player.dtp"), "r");
-
-	if (playerfile != NULL)
+	if (fopen(add("players/", player.name, "/player.dtp"), "r") != NULL)
 	{
 		game.load();
+		dungeon.show();
 	}
 	else 
 	{
-		log("Creating save file...");
-		fclose(mapfile);
+		log("Creating save file");
 		game.save();
 	}
 	
-	if (playerfile == NULL)
+	if (fopen(add("players/", player.name, "/player.dtp"), "r") == NULL)
 	{
-		clear();
-		endwin();
 		error("Creation of save file failed");
 		return;
 	}
@@ -176,73 +169,94 @@ void main()
 
 	while ((c = getch()) != 27) //Get pressed key
 	{
+		struct room room = rooms[dungeon.room_id];
  		getmaxyx(stdscr, WIN_H, WIN_W);
 
-		 if (c == MOVE_UP)
+		if (player.pos[Y] >= 0 && c == MOVE_UP)
 		{
+			log("Request to move up");
 			char sym = getpos_up(player.pos);
-			int pos[2] = pos_up(player.pos);
 
 			if (sym == ' ')
 			{
-				set_pos(player.pos, pos[X], pos[Y]);
-				dungeon.show();
+				log("Are is empty. Moving");
+				--player.pos[Y];
 			}
 			else if (sym == '#')
 			{
-				print_room(RAND_ROOM);
-				dungeon.show();
+				log("Door found. moving to a new room");
+				dungeon.new_room(RAND_ROOM);
+			}
+			else if (sym == '\0')
+			{
+				error("Tried to access an empty array value");
+				return;
 			}
 		}
 
-		if (c == MOVE_DOWN)
+		if (player.pos[Y] < room.y_size && c == MOVE_DOWN)
 		{
+			log("Request to move down");
 			char sym = getpos_down(player.pos);
-			int pos[2] = pos_down(player.pos);
 
 			if (sym == ' ')
 			{
-				set_pos(player.pos, pos[X], pos[Y]);
-				dungeon.show();
+				log("Are is empty. Moving");
+				++player.pos[Y];
 			}
 			else if (sym == '#')
 			{
-				print_room(RAND_ROOM);
-				dungeon.show();
+				log("Door found. moving to a new room");
+				dungeon.new_room(RAND_ROOM);
+			}
+			else if (sym == '\0')
+			{
+				error("Tried to access an empty array value");
+				return;
 			}
 		}
 
-		if (c == MOVE_LEFT)
+		if (player.pos[X] > 0 && c == MOVE_LEFT)
 		{
+			log("Request to move left");
 			char sym = getpos_left(player.pos);
-			int pos[2] = pos_left(player.pos);
 
 			if (sym == ' ')
 			{
-				set_pos(player.pos, pos[X], pos[Y]);
-				dungeon.show();
+				log("Are is empty. Moving");
+				--player.pos[X];
 			}
 			else if (sym == '#')
 			{
-				print_room(RAND_ROOM);
-				dungeon.show();
+				log("Door found. moving to a new room");
+				dungeon.new_room(RAND_ROOM);
+			}
+			else if (sym == '\0')
+			{
+				error("Tried to access an empty array value");
+				return;
 			}
 		}
 
-		if (c == MOVE_RIGHT)
+		if (player.pos[X] < room.x_size && c == MOVE_RIGHT)
 		{
+			log("Request to move right");
 			char sym = getpos_right(player.pos);
-			int pos[2] = pos_right(player.pos);
 
 			if (sym == ' ')
 			{
-				set_pos(player.pos, pos[X], pos[Y]);
-				dungeon.show();
+				log("Are is empty. Moving");
+				++player.pos[X];
 			}
 			else if (sym == '#')
 			{
-				print_room(RAND_ROOM);
-				dungeon.show();
+				log("Door found. moving to a new room");
+				dungeon.new_room(RAND_ROOM);
+			}
+			else if (sym == '\0')
+			{
+				error("Tried to access an empty array value");
+				return;
 			}
 		}
 
@@ -354,47 +368,56 @@ int pos1[], pos2[];
 
 void game_load()
 {
+	struct room room = rooms[dungeon.room_id];
+
 	log("Loading player save file");
+	playerfile = fopen(add("players/", player.name, "/player.dtp"), "r");
 	fscanf(playerfile, "HP-%d HP_MAX-%d W_ID-%d POS_Y-%d, POS_X-%d", &player.hp, &player.hp_max, &player.weapon_id, &player.pos[Y], &player.pos[X]);
 	fclose(playerfile);
 	
-	log("Loading map save file");
+	log("Loading map save file 0%");
+	mapfile = fopen(add("players/", player.name, "/map.dtm"), "r");
 	int a = 0;
-	mapfile = fopen(add("players/", player.name, "/map.dtm"), "w");
-	fscanf(mapfile, "OFFSET-{%d, %d}\nNPCS-{%s, %s, %s, %s, %s, %s, %s, %s, %s, %s}\n\nMAP-{", &dungeon.offset[Y], &dungeon.offset[X], npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a).name);
+	fscanf(mapfile, "NPCS-{%s, %s, %s, %s, %s, %s, %s, %s, %s, %s}\n\nMAP-{", &npc(a++).name, &npc(a++).name, &npc(a++).name, &npc(a++).name, &npc(a++).name, &npc(a++).name, &npc(a++).name, &npc(a++).name, &npc(a++).name, &npc(a).name);
 	
+	log("Loading map save file 50%");
+
 	int i = 0;
-	fscanf(mapfile, "0-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "1-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "2-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "3-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "4-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "5-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "6-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "7-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "8-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "9-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "10-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "11-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "12-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "13-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "14-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "15-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "16-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "17-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "18-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "19-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "20-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "21-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "22-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "23-{%s}", dungeon.map[i++]);
-	fscanf(mapfile, "24-{%s}", dungeon.map[i++]);
+	fscanf(mapfile, "0-{%s}", room.room[i++]);
+	fscanf(mapfile, "1-{%s}", room.room[i++]);
+	fscanf(mapfile, "2-{%s}", room.room[i++]);
+	fscanf(mapfile, "3-{%s}", room.room[i++]);
+	fscanf(mapfile, "4-{%s}", room.room[i++]);
+	fscanf(mapfile, "5-{%s}", room.room[i++]);
+	fscanf(mapfile, "6-{%s}", room.room[i++]);
+	fscanf(mapfile, "7-{%s}", room.room[i++]);
+	fscanf(mapfile, "8-{%s}", room.room[i++]);
+	fscanf(mapfile, "9-{%s}", room.room[i++]);
+	fscanf(mapfile, "10-{%s}", room.room[i++]);
+	fscanf(mapfile, "11-{%s}", room.room[i++]);
+	fscanf(mapfile, "12-{%s}", room.room[i++]);
+	fscanf(mapfile, "13-{%s}", room.room[i++]);
+	fscanf(mapfile, "14-{%s}", room.room[i++]);
+	fscanf(mapfile, "15-{%s}", room.room[i++]);
+	fscanf(mapfile, "16-{%s}", room.room[i++]);
+	fscanf(mapfile, "17-{%s}", room.room[i++]);
+	fscanf(mapfile, "18-{%s}", room.room[i++]);
+	fscanf(mapfile, "19-{%s}", room.room[i++]);
+	fscanf(mapfile, "20-{%s}", room.room[i++]);
+	fscanf(mapfile, "21-{%s}", room.room[i++]);
+	fscanf(mapfile, "22-{%s}", room.room[i++]);
+	fscanf(mapfile, "23-{%s}", room.room[i++]);
+	fscanf(mapfile, "24-{%s}", room.room[i++]);
 	
 	fclose(mapfile);
+
+	log("Done");
 }
 
 void game_save()
 {
+	struct room room = rooms[dungeon.room_id];
+	
 	log("Saving player");
 	playerfile = fopen(add("players/", player.name, "/player.dtp"), "w");
 	fprintf(playerfile, "HP-%d\nHP_MAX-%d\nW_ID-%d\nPOS-{%d, %d}", player.hp, player.hp_max, player.weapon_id, player.pos[Y], player.pos[X]);
@@ -403,10 +426,10 @@ void game_save()
 	log("Saving map");
 	mapfile = fopen(add("players/", player.name, "/map.dtm"), "w");
 	int a = 0;
-	fprintf(mapfile, "OFFSET-{%d, %d}\nNPCS-{%s, %s, %s, %s, %s, %s, %s, %s, %s, %s}\n\nMAP-{", dungeon.offset[Y], dungeon.offset[X], npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a).name);
+	fprintf(mapfile, "NPCS-{%s, %s, %s, %s, %s, %s, %s, %s, %s, %s}\n\nMAP-{", npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a++).name, npc(a).name);
 	
 	for (int i = 0; i < 25; ++i)
-		fprintf(mapfile, "\n%d-{%s}", i, dungeon.map[i]);
+		fprintf(mapfile, "\n%d-{%s}", i, room.room[i]);
 
 	fprintf(mapfile, "\n}");
 
