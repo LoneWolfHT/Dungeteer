@@ -18,10 +18,8 @@ int number;
 	dungeon.room_id = number;
 
 	set_pos(player.pos, 1, room.door);
-	
-	dungeon.npc = room.npc;
-	set_pos(NPC.pos, mrand(1, room.x_size-1), mrand(1, room.y_size-1));
 
+	dungeon.npc = room.npc;
 }
 
 void show_dungeon()
@@ -43,7 +41,8 @@ void show_dungeon()
 	attroff(COLOR_PAIR(COLOR_GREEN));
 	refresh();
 
-	mvprintw(NPC.pos[Y], NPC.pos[X], "%c", NPC.symbol);
+	if (NPC.id != NO_NPC)
+		mvprintw(NPC.pos[Y], NPC.pos[X], "%c", NPC.symbol);
 
 	print_debug();
 

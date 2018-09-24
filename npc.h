@@ -9,12 +9,13 @@ struct npc npcs[] = {
 	EMPTY,
 	{
 		"Rat", //Name
-		RAT,
+		RAT, //npc id
 		'R', //Symbol
 		5, //HP
 		5, //MAX_HP
 		{}, //Pos
 		1, //dmg
+		0, //skill
 		7, //View range
 		{ITEM_GOLD, 7} //item to drop on death
 	}
@@ -27,11 +28,13 @@ void move_npc()
 
 	if (dist(player.pos, NPC.pos) <= NPC.view_range) //Need to add line of sight check
 	{
+		log("NPC can see player");
 		getroute(NPC.pos, player.pos);
 	}
 	else
 	{
-		random_move(&NPC.pos);
+		log("NPC can't see player");
+		random_move(NPC.pos);
 	}
 }
 

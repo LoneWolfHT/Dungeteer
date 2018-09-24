@@ -28,6 +28,7 @@ struct npc
 	int hp_max;
 	int pos[2];
 	int dmg;
+	int skill;
 	int view_range;
 	struct drop drop;
 };
@@ -48,6 +49,7 @@ struct room
 struct player 
 {
 	char name[50];
+	int skill;
 	int hp;
 	int hp_max;
 	int weapon_id;

@@ -17,6 +17,7 @@ void generate_rooms()
 	rooms[ROOM_START].x_size = 22;
 	rooms[ROOM_START].y_size = 11;
 	rooms[ROOM_START].npc = npcs[RAT];
+	set_pos(rooms[ROOM_START].npc.pos, 3, 9);
 	
 	rooms[ROOM_START].room[y++] = "+--------------------+";
 	rooms[ROOM_START].room[y++] = "|                    |";
@@ -36,6 +37,7 @@ void generate_rooms()
 	rooms[ROOM_MAZE].x_size = 22;
 	rooms[ROOM_MAZE].y_size = 11;
 	rooms[ROOM_MAZE].npc = npcs[RAT];
+	set_pos(rooms[ROOM_MAZE].npc.pos, 16, 5);
 	
 	rooms[ROOM_MAZE].room[y++] = "+--------------------+";
 	rooms[ROOM_MAZE].room[y++] = "|---#                |";

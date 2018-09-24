@@ -2,11 +2,12 @@
 #define DUNGETEER_PLAYER
 
 struct player player = {
-	"Name",
-	20,
-	20,
-	ITEM_SWORD,
-	{}
+	"Name", //Player name
+	0, //Player skill
+	20, //HP
+	20, //Max HP
+	ITEM_SWORD, //Wield item
+	{} //Pos
 };
 
 #endif
