@@ -1,3 +1,6 @@
+#ifndef DUNGETEER_STRUCTS
+#define DUNGETEER_STRUCTS
+
 //ITEMS
 
 struct drop
@@ -19,6 +22,7 @@ struct item
 struct npc
 {
 	char *name;
+	int id;
 	char symbol;
 	int hp;
 	int hp_max;
@@ -55,8 +59,9 @@ struct player
 struct dungeon
 {
 	int room_id;
-	struct npc npcs[10];
-	void (*prepare)();
+	struct npc npc;
 	void (*new_room)();
 	void (*show)();
 };
+
+#endif

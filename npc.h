@@ -1,40 +1,38 @@
-struct npc rat = {
-	"Rat", //Name
-	'R', //Symbol
-	5, //HP
-	5, //MAX_HP
-	{}, //Pos
-	1, //dmg
-	7, //View range
-	{ITEM_GOLD, 7} //item to drop on death
+#ifndef DUNGETEER_NPC
+#define DUNGETEER_NPC
+
+#define NO_NPC 0
+#define RAT 1
+#define MAX_NPCS 2
+
+struct npc npcs[] = {
+	EMPTY,
+	{
+		"Rat", //Name
+		RAT,
+		'R', //Symbol
+		5, //HP
+		5, //MAX_HP
+		{}, //Pos
+		1, //dmg
+		7, //View range
+		{ITEM_GOLD, 7} //item to drop on death
+	}
 };
 
-void move_npcs()
+void move_npc()
 {
-	for (int i = 0; i < 10; ++i)
+	if (NPC.id == NO_NPC)
+		return;
+
+	if (dist(player.pos, NPC.pos) <= NPC.view_range) //Need to add line of sight check
 	{
-		dungeon.npcs[i] = get_npc_by_name(npc(i).name);
-
-		if (!npc(i).hp)
-			continue;
-
-		if (dist(player.pos, npc(i).pos) <= npc(i).view_range) //Need to add line of sight check
-		{
-			getroute(npc(i).pos, player.pos);
-		}
-		else
-		{
-			random_move(npc(i).pos);
-		}
+		getroute(NPC.pos, player.pos);
+	}
+	else
+	{
+		random_move(&NPC.pos);
 	}
 }
 
-struct npc get_npc_by_name(name)
-char *name;
-{
-	struct npc none = EMPTY;
-	if (name == "Rat")
-		return(rat);
-
-	return(none);
-}
+#endif

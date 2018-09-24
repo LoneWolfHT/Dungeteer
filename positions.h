@@ -1,5 +1,8 @@
+#ifndef DUNGETEER_POS
+#define DUNGETEER_POS
+
 void random_move(pos)
-int *pos[];
+int *pos;
 {
 	int possible[4] = {TRUE, TRUE, TRUE, TRUE};
 	struct room room = rooms[dungeon.room_id];
@@ -7,19 +10,19 @@ int *pos[];
 
 	static int last = -1;
 
-	if (room.room[*pos[Y]+1][*pos[X]] != ' ')
+	if (pos[Y] <= room.y_size || room.room[pos[Y]+1][pos[X]] != ' ')
 		possible[DOWN] = FALSE;
 
-	if (room.room[*pos[Y]-1][*pos[X]] != ' ')
+	if (pos[Y] >= 0 || room.room[pos[Y]-1][pos[X]] != ' ')
 		possible[UP] = FALSE;
 
-	if (room.room[*pos[Y]][*pos[X]+1] != ' ')
+	if (pos[X] >= room.x_size || room.room[pos[Y]][pos[X]+1] != ' ')
 		possible[RIGHT] = FALSE;
 
-	if (room.room[*pos[Y]][*pos[X]-1] != ' ')
+	if (pos[X] <= 0 || room.room[pos[Y]][pos[X]-1] != ' ')
 		possible[LEFT] = FALSE;
 
-	while (1)
+	for (int i = 0;; ++i)
 	{
 		int dir = mrand(0, 3);
 
@@ -28,6 +31,9 @@ int *pos[];
 			to = dir;
 			break;
 		}
+
+		if (i == 25)
+			return;
 	}
 
 	switch (to)
@@ -146,22 +152,22 @@ int pos2[];
 }
 
 void getroute(pos1, pos2)
-int *pos1[], pos2[];
+int *pos1, pos2[];
 {
 					 /*Top, Bottom, Right, Left*/
 	int possible[4] = {TRUE, TRUE, TRUE, TRUE};
 	struct room room = rooms[dungeon.room_id];
 
-	if (room.room[*pos1[Y]+1][*pos1[X]] != ' ')
+	if (pos1[Y] <= room.y_size || room.room[pos1[Y]+1][pos1[X]] != ' ')
 		possible[DOWN] = FALSE;
 
-	if (room.room[*pos1[Y]-1][*pos1[X]] != ' ')
+	if (pos1[Y] >= 0 || room.room[pos1[Y]-1][pos1[X]] != ' ')
 		possible[UP] = FALSE;
 
-	if (room.room[*pos1[Y]][*pos1[X]+1] != ' ')
+	if (pos1[X] >= room.x_size || room.room[pos1[Y]][pos1[X]+1] != ' ')
 		possible[RIGHT] = FALSE;
 
-	if (room.room[*pos1[Y]][*pos1[X]-1] != ' ')
+	if (pos1[X] <= 0 || room.room[pos1[Y]][pos1[X]-1] != ' ')
 		possible[LEFT] = FALSE;
 
 	int x = setsign(pos1[X]-pos2[X], '+');
@@ -223,3 +229,5 @@ int *pos1[], pos2[];
 		}
 	}
 }
+
+#endif

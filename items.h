@@ -1,3 +1,6 @@
+#ifndef DUNGETEER_ITEMS
+#define DUNGETEER_ITEMS
+
 struct item items[] = {
 	{/*Gold*/
 		"Gold",
@@ -12,3 +15,5 @@ struct item items[] = {
 		{TRUE, 3}
 	},
 };
+
+#endif

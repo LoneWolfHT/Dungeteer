@@ -1,17 +1,12 @@
+#ifndef DUNGETEER_DUNGEON
+#define DUNGETEER_DUNGEON
+
 struct dungeon dungeon = {
 	ROOM_START, //room id
-	{EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY}, //npcs
-	dungeon_prepare,
+	EMPTY, //npcs
 	new_room,
 	show_dungeon
 };
-
-void dungeon_prepare()
-{
-	generate_rooms();
-
-	new_room(ROOM_START, 0, DUN_Y/2);
-}
 
 void new_room(number)
 int number;
@@ -23,8 +18,10 @@ int number;
 	dungeon.room_id = number;
 
 	set_pos(player.pos, 1, room.door);
+	
+	dungeon.npc = room.npc;
+	set_pos(NPC.pos, mrand(1, room.x_size-1), mrand(1, room.y_size-1));
 
-	dungeon.npcs[NPC_COUNT++] = room.npc;
 }
 
 void show_dungeon()
@@ -46,7 +43,11 @@ void show_dungeon()
 	attroff(COLOR_PAIR(COLOR_GREEN));
 	refresh();
 
+	mvprintw(NPC.pos[Y], NPC.pos[X], "%c", NPC.symbol);
+
 	print_debug();
 
 	refresh();
 }
+
+#endif
