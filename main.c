@@ -5,9 +5,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 #define Y 0 //Y coordinate
 #define X 1 //X coordinate
+
+#define printpos(text, pos) fprintf(logfile, "\n%s{%d, %d}\n", text, pos.x, pos.y)
+
+typedef struct position position;
 
 #define WHITE_BLACK 8
 #define WHITE_RED 9
@@ -19,16 +24,20 @@
 #define WHITE_WHITE 15
 
 #define NPC dungeon.npc
-//#define log(text) def_prog_mode(); endwin(); fprintf(stderr, "%s\n\n", text); reset_prog_mode(); refresh()
-//#define log(text) clear(); dungeon.show(); mvprintw(15, 0, "%s...", text); refresh(); sleep(1)
+#define ROOM rooms[dungeon.room_id]
+
+//#define fprintf(logfile, text) def_prog_mode(); endwin(); fprintf(stderr, "%s\n\n", text); reset_prog_mode(); refresh()
+//#define fprintf(logfile, text) clear(); dungeon.show(); mvprintw(15, 0, "%s...", text); refresh(); sleep(1)
 #define log
 #define error(text) clear(); endwin(); printf("\n[ERROR] %s\n\n", text)
 
-int mrand(), getlen(), find(), setsign(), pos_equal();
+int mrand(), getlen(), find(), setsign(), pos_equal(), ftoi(), distance();
+float itof();
 void game_load(), game_save(), map_save();
 char *add(), addstring[100];
 
 FILE *savefile, *fopen();
+FILE *logfile;
 
 int WIN_H = 50; //Window height
 int WIN_W = 50; //Window width
@@ -50,33 +59,32 @@ struct game game = {
 	game_save
 };
 
-void move_npc(), dungeon_prepare(), generate_rooms(), new_room(), show_dungeon(), random_move(), getroute();
+void move_npc(), dungeon_prepare(), generate_rooms(), new_room(), show_dungeon();
 int dist();
+position random_move(), getroute(), pos_sub(), pos_add(), pos_normalized();
 
 int NPC_COUNT = 0;
+int ROOM_COUNT = 0;
 
-#define print_debug() mvprintw(11, 0, "%s\'s Pos: {%d, %d} | Health: %d/%d | Skill: %d [|] NPC_HP: %d/%d | NPC pos: {%d, %d}\n\n> ", player.name, player.pos[Y], player.pos[X], player.hp, player.hp_max, player.skill, NPC.hp, NPC.hp_max, NPC.pos[Y], NPC.pos[X])
-#define set_pos(pos, x, y) pos[Y] = y; pos[X] = x
+#define print_debug() mvprintw(11, 0, "%s: Health: %d/%d | Skill: %d | Weapon: %s: Dmg: %d\n\n>", player.name, player.hp, player.hp_max, player.skill, player_weapon.name, player_weapon.weapon[DMG])
+#define print_debug2() mvprintw(13, 0, "%s: Health: %d/%d | Dmg: %d | Skill: %d\n\n>", NPC.name, NPC.hp, NPC.hp_max, NPC.dmg, NPC.skill)
+#define set_pos(pos, x, y) pos = (position){x, y}
 
-#define getpos(pos) room.room[pos[Y]][pos[X]]
-#define getpos_up(pos) room.room[pos[Y]-1][pos[X]]
-#define getpos_down(pos) room.room[pos[Y]+1][pos[X]]
-#define getpos_right(pos) room.room[pos[Y]][pos[X]+1]
-#define getpos_left(pos) room.room[pos[Y]][pos[X]-1]
+#define getpos(pos) rooms[dungeon.room_id].room[pos.y][pos.x]
+#define getpos_up(pos) rooms[dungeon.room_id].room[pos.y-1][pos.x]
+#define getpos_down(pos) rooms[dungeon.room_id].room[pos.y+1][pos.x]
+#define getpos_right(pos) rooms[dungeon.room_id].room[pos.y][pos.x+1]
+#define getpos_left(pos) rooms[dungeon.room_id].room[pos.y][pos.x-1]
 
-#define pos_up(pos) {pos[Y]-1, pos[X]}
-#define pos_down(pos) {pos[Y+1], pos[X]}
-#define pos_right(pos) {pos[Y], pos[X]+1}
-#define pos_left(pos) {pos[Y], pos[X]-1}
+#define pos_up(pos) (position){pos.x-1, pos.y}
+#define pos_down(pos) (position){pos.x+1, pos.y}
+#define pos_right(pos) (position){pos.x, pos.y+1}
+#define pos_left(pos) (position){pos.x, pos.y-1}
 
-#define RAND_ROOM mrand(0, ROOM_COUNT-1)
+#define RAND_ROOM mrand(1, ROOM_COUNT-1)
 
 #define DUN_X 50
 #define DUN_Y 50
-
-#define ITEM_COUNT 2
-#define ITEM_GOLD 0
-#define ITEM_SWORD 1
 
 #define EMPTY {"...", 0, '?', 0, 0, {}, 0, 0, 0, {}}
 
@@ -93,7 +101,7 @@ struct room rooms[];
 
 #include "player.h"
 
-#define player_setpos(y, x) player.pos[Y] = y; player.pos[X] = x
+#define player_setpos(y, x) player.pos.y = y; player.pos.x = x
 #define player_weapon items[player.weapon_id]
 
 #include "items.h"
@@ -109,11 +117,14 @@ void main()
 	time_t t;
 	srand((unsigned) time(&t));
 
+	logfile = fopen("logs.txt", "w");
+
 	initscr();
  	echo();
  	start_color();
  	curs_set(0);
  	keypad(stdscr, TRUE);
+	cbreak();
 
 	for (int i = 0; i < 8; ++i)
 		init_pair(i, i, 0);
@@ -129,6 +140,10 @@ void main()
 	getstr(player.name);
 	noecho();
 
+	for (int i = 0; player.name[i] != '\0'; ++i)
+		if (player.name[i] == ' ')
+			player.name[i] = '_';
+
 	generate_rooms();
 
 	system("mkdir ./players/");
@@ -136,21 +151,21 @@ void main()
 
 	if (fopen(add("players/", player.name, "/save.dt"), "r") == NULL)
 	{
-		log("Preparing the dungeon");
+		fprintf(logfile, "\nPreparing the dungeon");
 		new_room(ROOM_START);
 	}
 
-	log("Searching for save file");
+	fprintf(logfile, "\nSearching for save file");
 
 	if (fopen(add("players/", player.name, "/save.dt"), "r") != NULL)
 	{
-		log("Save file found");
+		fprintf(logfile, "\nSave file found");
 		game.load();
 		dungeon.show();
 	}
 	else 
 	{
-		log("Creating save file");
+		fprintf(logfile, "\nCreating save file");
 		game.save();
 	}
 	
@@ -166,25 +181,25 @@ void main()
 	dungeon.show();
 	timeout(500);
 
-	while ((c = getch()) != 27) //Get pressed key
+	while ((c = getch()) != 27 && player.hp > 0) //Get pressed key and make sure player isn't dead
 	{
 		static int interval = 0;
 		struct room room = rooms[dungeon.room_id];
  		getmaxyx(stdscr, WIN_H, WIN_W);
 
-		if (player.pos[Y] > 0 && c == MOVE_UP)
+		if (player.pos.y > 0 && c == MOVE_UP)
 		{
-			log("Request to move up");
+			fprintf(logfile, "\nRequest to move up");
 			char sym = getpos_up(player.pos);
 
 			if (sym == ' ')
 			{
-				log("Area is empty. Moving");
-				--player.pos[Y];
+				fprintf(logfile, "\nArea is empty. Moving");
+				--player.pos.y;
 			}
 			else if (sym == SYMBOL_DOOR)
 			{
-				log("Door found. moving to a new room");
+				fprintf(logfile, "\nDoor found. moving to a new room");
 				dungeon.new_room(RAND_ROOM);
 			}
 			else if (sym == '\0')
@@ -194,19 +209,19 @@ void main()
 			}
 		}
 
-		if (player.pos[Y] < room.y_size && c == MOVE_DOWN)
+		if (player.pos.y < room.y_size && c == MOVE_DOWN)
 		{
-			log("Request to move down");
+			fprintf(logfile, "\nRequest to move down");
 			char sym = getpos_down(player.pos);
 
 			if (sym == ' ')
 			{
-				log("Area is empty. Moving");
-				++player.pos[Y];
+				fprintf(logfile, "\nArea is empty. Moving");
+				++player.pos.y;
 			}
 			else if (sym == SYMBOL_DOOR)
 			{
-				log("Door found. moving to a new room");
+				fprintf(logfile, "\nDoor found. moving to a new room");
 				dungeon.new_room(RAND_ROOM);
 			}
 			else if (sym == '\0')
@@ -216,19 +231,19 @@ void main()
 			}
 		}
 
-		if (player.pos[X] > 0 && c == MOVE_LEFT)
+		if (player.pos.x > 0 && c == MOVE_LEFT)
 		{
-			log("Request to move left");
+			fprintf(logfile, "\nRequest to move left");
 			char sym = getpos_left(player.pos);
 
 			if (sym == ' ')
 			{
-				log("Area is empty. Moving");
-				--player.pos[X];
+				fprintf(logfile, "\nArea is empty. Moving");
+				--player.pos.x;
 			}
 			else if (sym == SYMBOL_DOOR)
 			{
-				log("Door found. moving to a new room");
+				fprintf(logfile, "\nDoor found. moving to a new room");
 				dungeon.new_room(RAND_ROOM);
 			}
 			else if (sym == '\0')
@@ -238,19 +253,19 @@ void main()
 			}
 		}
 
-		if (player.pos[X] < room.x_size && c == MOVE_RIGHT)
+		if (player.pos.x < room.x_size && c == MOVE_RIGHT)
 		{
-			log("Request to move right");
+			fprintf(logfile, "\nRequest to move right");
 			char sym = getpos_right(player.pos);
 
 			if (sym == ' ')
 			{
-				log("Area is empty. Moving");
-				++player.pos[X];
+				fprintf(logfile, "\nArea is empty. Moving");
+				++player.pos.x;
 			}
 			else if (sym == SYMBOL_DOOR)
 			{
-				log("Door found. moving to a new room");
+				fprintf(logfile, "\nDoor found. moving to a new room");
 				dungeon.new_room(RAND_ROOM);
 			}
 			else if (sym == '\0')
@@ -268,7 +283,7 @@ void main()
 
 			getstr(command);
 
-			log(add("Player runs command: \'", command, "\'"));
+			fprintf(logfile, "Player runs command: \'%s\'", command);
 
 			if (find("save", command) != ERR)
 				game.save();
@@ -276,9 +291,9 @@ void main()
 			noecho();
 		}
 
-		if (dist(player.pos, NPC.pos) <= 1)
+		if (distance(player.pos, NPC.pos) <= 1.0)
 		{
-			NPC.hp -= mrand(player_weapon.weapon[DAMAGE], player_weapon.weapon[DAMAGE]+player.skill);
+			NPC.hp -= mrand(player_weapon.weapon[DMG], player_weapon.weapon[DMG]+player.skill);
 
 			if (NPC.hp > 0)
 				player.hp -= mrand(NPC.dmg, NPC.dmg+NPC.skill);
@@ -300,10 +315,26 @@ void main()
 			move_npc();
 		}
 
+		if (player.hp < player.hp_max && mrand(1, 15) == 3)
+			++player.hp;
+
 		dungeon.show();
 	}
 
-	game.save();
+	nocbreak();
+
+	if (player.hp <= 0)
+	{
+		char *none;
+		clear();
+		mvprintw(WIN_H/2, (WIN_W/2)-18, "You died. Press [Enter] to continue");
+		refresh();
+		getstr(none);
+		system(add("rm -r ./players/", player.name, "/"));
+	}
+	else
+		game.save();
+
 	clear();
 	endwin();
 	system("clear");
@@ -372,34 +403,25 @@ char sign;
 	return(num);
 }
 
-int pos_equal(pos1, pos2)
-int pos1[], pos2[];
-{
-	if (pos1[Y] == pos2[Y] && pos1[X] == pos2[X])
-		return(TRUE);
-
-	return(FALSE);
-}
-
 void game_load()
 {
 	struct room room = rooms[dungeon.room_id];
 
-	log("Loading player");
+	fprintf(logfile, "\nLoading player");
 	savefile = fopen(add("players/", player.name, "/save.dt"), "r");
-	fscanf(savefile, "HP=%d/%d\nW_ID=%d\nPOS={%d, %d}", &player.hp, &player.hp_max, &player.weapon_id, &player.pos[Y], &player.pos[X]);
+	fscanf(savefile, "HP=%d/%d\nW_ID=%d\nPOS={%d, %d}", &player.hp, &player.hp_max, &player.weapon_id, &player.pos.y, &player.pos.x);
 	
-	log("Loading map");
+	fprintf(logfile, "\nLoading map");
 	int a = 0;
-	fscanf(savefile, "\nNPC_ID=%d\nNPC_POS={%d, %d}\nNPC_HP=%d\nMAP_ID=%d", &NPC.id, &NPC.pos[Y], &NPC.pos[X], &NPC.hp, &dungeon.room_id);
+	fscanf(savefile, "\nNPC_ID=%d\nNPC_POS={%d, %d}\nNPC_HP=%d\nMAP_ID=%d", &NPC.id, &NPC.pos.y, &NPC.pos.x, &NPC.hp, &dungeon.room_id);
 	
 	if (NPC.id < MAX_NPCS)
 	{
-		int pos[2] = {NPC.pos[Y], NPC.pos[X]};
+		position pos = {NPC.pos.x, NPC.pos.y};
 		int hp = NPC.hp;
 
 		NPC = npcs[NPC.id];
-		set_pos(NPC.pos, pos[X], pos[Y]);
+		set_pos(NPC.pos, pos.x, pos.y);
 		NPC.hp = hp;
 	}
 	else
@@ -407,19 +429,19 @@ void game_load()
 	
 	fclose(savefile);
 
-	log("Done");
+	fprintf(logfile, "\nDone");
 }
 
 void game_save()
 {
 	struct room room = rooms[dungeon.room_id];
 	
-	log("Saving player");
+	fprintf(logfile, "\nSaving player");
 	savefile = fopen(add("players/", player.name, "/save.dt"), "w");
-	fprintf(savefile, "HP=%d/%d\nW_ID=%d\nPOS={%d, %d}", player.hp, player.hp_max, player.weapon_id, player.pos[Y], player.pos[X]);
+	fprintf(savefile, "HP=%d/%d\nW_ID=%d\nPOS={%d, %d}", player.hp, player.hp_max, player.weapon_id, player.pos.y, player.pos.x);
 
-	log("Saving map");
-	fprintf(savefile, "\nNPC_ID=%d\nNPC_POS={%d, %d}\nNPC_HP=%d\nMAP_ID=%d", NPC.id, NPC.pos[Y], NPC.pos[X], NPC.hp, dungeon.room_id);
+	fprintf(logfile, "\nSaving map");
+	fprintf(savefile, "\nNPC_ID=%d\nNPC_POS={%d, %d}\nNPC_HP=%d\nMAP_ID=%d", NPC.id, NPC.pos.y, NPC.pos.x, NPC.hp, dungeon.room_id);
 
 	fclose(savefile);
 }
@@ -451,4 +473,18 @@ char before[], string[], after[];
 	addstring[b] = '\0';
 
 	return(addstring);
+}
+
+int ftoi(f)
+float f;
+{
+	f = floor(f);
+
+	return(f);
+}
+
+float itof(i)
+int i;
+{
+	return(i);
 }

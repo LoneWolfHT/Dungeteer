@@ -6,8 +6,8 @@ struct player player = {
 	0, //Player skill
 	20, //HP
 	20, //Max HP
-	ITEM_SWORD, //Wield item
-	{} //Pos
+	1, //Wield item
+	{-1, -1} //Pos
 };
 
 #endif

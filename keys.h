@@ -1,4 +1,4 @@
-#ifndef DUNGETEER_ITEMS
+#ifndef DUNGETEER_KEYS
 #define DUNGETEER_KEYS
 
 #define MOVE_UP 'w'

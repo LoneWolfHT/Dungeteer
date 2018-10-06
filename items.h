@@ -1,10 +1,11 @@
 #ifndef DUNGETEER_ITEMS
 #define DUNGETEER_ITEMS
 
-#define GOLD 0
-#define SWORD 1
+#define ITEM_COUNT 2
+#define ITEM_GOLD 0
+#define ITEM_SWORD 1
 
-#define DAMAGE 1
+#define DMG 1
 
 struct item items[] = {
 	{/*Gold*/

@@ -1,6 +1,14 @@
 #ifndef DUNGETEER_STRUCTS
 #define DUNGETEER_STRUCTS
 
+//POS
+
+struct position
+{
+	int x;
+	int y;
+};
+
 //ITEMS
 
 struct drop
@@ -26,7 +34,7 @@ struct npc
 	char symbol;
 	int hp;
 	int hp_max;
-	int pos[2];
+	position pos;
 	int dmg;
 	int skill;
 	int view_range;
@@ -53,7 +61,7 @@ struct player
 	int hp;
 	int hp_max;
 	int weapon_id;
-	int pos[2];
+	position pos;
 };
 
 //DUNGEON

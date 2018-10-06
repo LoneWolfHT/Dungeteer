@@ -1,275 +1,113 @@
 #ifndef DUNGETEER_POS
 #define DUNGETEER_POS
 
-void random_move(pos)
-int *pos;
+position random_move(pos)
+position pos;
 {
-	int possible[4] = {TRUE, TRUE, TRUE, TRUE};
-	struct room room = rooms[dungeon.room_id];
-	int to;
+	position newpos = {0, 0};
+	int limit = 0;
 
-	static int last = -1;
-
-	if (pos[Y] >= room.y_size-1 || room.room[pos[Y]+1][pos[X]] != ' ')
-		possible[DOWN] = FALSE;
-
-	if (pos[Y] <= 1 || room.room[pos[Y]-1][pos[X]] != ' ')
-		possible[UP] = FALSE;
-
-	if (pos[X] >= room.x_size-1 || room.room[pos[Y]][pos[X]+1] != ' ')
-		possible[RIGHT] = FALSE;
-
-	if (pos[X] <= 1 || room.room[pos[Y]][pos[X]-1] != ' ')
-		possible[LEFT] = FALSE;
-
-	for (int i = 0;; ++i)
+	while (getpos(newpos) != ' ')
 	{
-		int dir = mrand(0, 3);
+		int random = mrand(1, 4);
 
-		if (possible[dir] == TRUE && dir != last)
+		fprintf(logfile, "\n[Random_Move] value of random is %d", random);
+
+		switch (random)
 		{
-			to = dir;
-			log("direction found");
+			case 1:
+				newpos = pos_up(pos); break;
+			case 2:
+				newpos = pos_down(pos); break;
+			case 3:
+				newpos = pos_left(pos); break;
+			case 4:
+				newpos = pos_right(pos); break;
+		}
+
+		if (limit++ >= 100)
+		{
+			newpos = pos;
 			break;
 		}
-
-		if (i == 100)
-		{
-			log("limit reached");
-			return;
-		}
 	}
 
-	switch (to)
+	return(newpos);
+}
+
+position pos_add(pos1, pos2)
+position pos1, pos2;
+{
+	position pos;
+
+	pos.y = pos1.y + pos2.y;
+	pos.x = pos1.x + pos2.x;
+
+	return(pos);
+}
+
+position pos_sub(pos1, pos2)
+position pos1, pos2;
+{
+	position pos;
+
+	pos.y = pos1.y - pos2.y;
+	pos.x = pos1.x - pos2.x;
+
+	return(pos);
+}
+
+position getroute(pos1, pos2)
+position pos1, pos2;
+{
+	position dir = pos_normalized(pos_sub(pos2, pos1));
+	position pos = pos_add(pos1, dir);
+
+	if (ROOM.room[pos.y][pos.x] == ' ' && !pos_equal(pos, player.pos))
 	{
-		case UP:
-		{
-			--pos[Y];
-			log("Moving up");
-			return;
-		}
-		case DOWN:
-		{
-			++pos[Y];
-			log("Moving down");
-			return;
-		}
-		case LEFT:
-		{
-			--pos[X];
-			log("Moving left");
-			return;
-		}
-		case RIGHT:
-		{
-			++pos[X];
-			log("Moving right");
-			return;
-		}
+		return(pos);
+	}
+	else
+	{
+		return(random_move(pos1));
 	}
 }
 
-int dist(pos1, pos2)
-int pos1[];
-int pos2[];
+int distance(pos1, pos2)
+position pos1, pos2;
 {
-	int distance = 0;
-	int pos[2] = {pos2[Y], pos2[X]};
+	position pos = pos_sub(pos2, pos1);
 
-	pos[Y] -= pos1[Y];
-	pos[X] -= pos1[X];
-
-	for (int i = 0; pos[Y] != 0 || pos[X] != 0; ++i)
-	{
-		if (pos[Y] > 0 && pos[X] > 0) // y > 0 and x > 0
-		{
-			--pos[Y];
-			--pos[X];
-			++distance;
-		}
-		else if (pos[Y] < 0 && pos[X] < 0) //y < 0 and x < 0
-		{
-			++pos[Y];
-			++pos[X];
-			++distance;
-		}
-		else if (pos[Y] > 0 && pos[X] < 0) // y > 0 and x < 0
-		{
-			--pos[Y];
-			++pos[X];
-			++distance;
-		}
-		else if (pos[Y] < 0 && pos[X] > 0) // y < 0 and x > 0
-		{
-			++pos[Y];
-			--pos[X];
-			++distance;
-		}
-		else if (pos[Y] == 0) // y == 0
-		{
-			if (pos[X] > 0) // x > 0
-			{
-				--pos[X];
-				++distance;
-			}
-			else if (pos[X] < 0) // x < 0
-			{
-				++pos[X];
-				++distance;
-			}
-		}
-		else if (pos[X] == 0) // x == 0
-		{
-			if (pos[Y] > 0) // y > 0
-			{
-				--pos[Y];
-				++distance;
-			}
-			else if (pos[Y] < 0) // y < 0
-			{
-				++pos[Y];
-				++distance;
-			}
-		}
-		else
-		{
-			int x = setsign(pos[X], '+');
-			int y = setsign(pos[Y], '+');
-
-			if (x > y)
-			{	
-				if (pos[X] > 0)
-					--pos[X];
-				else
-					++pos[X];
-
-				++distance;
-			}
-			else if (x < y)
-			{
-				if (pos[Y] > 0)
-					--pos[Y];
-				else
-					++pos[Y];
-				
-				++distance;
-			}
-		}
-	}
-
-	return(distance);
+	return(ftoi(sqrt(pow(itof(pos.x), 2.0)+pow(itof(pos.y), 2.0))));
 }
 
-void getroute(pos1, pos2)
-int *pos1, pos2[];
+position pos_normalized(pos)
+position pos;
 {
-					 /*Top, Bottom, Right, Left*/
-	int possible[4] = {TRUE, TRUE, TRUE, TRUE};
-	struct room room = rooms[dungeon.room_id];
+	if (pos.x >= 1)
+		pos.x = 1;
+	else if (pos.x <= -1)
+		pos.x = -1;
+	else
+		pos.x = 0;
 
-	if (pos1[Y] >= room.y_size || room.room[pos1[Y]+1][pos1[X]] != ' ')
-		possible[DOWN] = FALSE;
+	if (pos.y >= 1)
+		pos.y = 1;
+	else if (pos.y <= -1)
+		pos.y = -1;
+	else
+		pos.y = 0;
 
-	if (pos1[Y] <= 0 || room.room[pos1[Y]-1][pos1[X]] != ' ')
-		possible[UP] = FALSE;
+	return(pos);
+}
 
-	if (pos1[X] >= room.x_size || room.room[pos1[Y]][pos1[X]+1] != ' ')
-		possible[RIGHT] = FALSE;
+int pos_equal(pos1, pos2)
+position pos1, pos2;
+{
+	if (pos1.y == pos2.y && pos1.x == pos2.x)
+		return(TRUE);
 
-	if (pos1[X] <= 0 || room.room[pos1[Y]][pos1[X]-1] != ' ')
-		possible[LEFT] = FALSE;
-
-	int x = setsign(pos1[X]-pos2[X], '+');
-	int y = setsign(pos1[Y]-pos2[Y], '+');
-
-	if ((x == 0 && y == 0) || pos_equal(pos1, pos2))
-	{
-		log("Positions are equal");
-		return;
-	}
-
-	if (x > y)
-	{	
-		if (pos1[X]-pos2[X] > 0 && possible[LEFT])
-		{
-			--pos1[X];
-			log("Moving left");
-			return;
-		}
-		else if (possible[RIGHT])
-		{
-			++pos1[X];
-			log("Moving right");
-			return;
-		}
-		else
-		{
-			random_move(&NPC.pos);
-		}
-	}
-	
-	if (x < y)
-	{
-		if (pos1[Y]-pos2[Y] > 0 && possible[UP])
-		{
-			--pos1[Y];
-			log("Moving up");
-			return;
-		}
-		else if (possible[DOWN])
-		{
-			++pos1[Y];
-			log("Moving down");
-			return;
-		}
-		else
-		{
-			random_move(&NPC.pos);
-		}
-	}
-	
-	if (x == 0)
-	{
-		if (pos1[Y]-pos2[Y] > 0 && possible[UP])
-		{
-			--pos1[Y];
-			log("Moving up");
-			return;
-		}
-		else if (possible[DOWN])
-		{
-			++pos1[Y];
-			log("Moving down");
-			return;
-		}
-		else
-		{
-			random_move(&NPC.pos);
-		}
-	}
-	
-	if (y == 0)
-	{	
-		if (pos1[X]-pos2[X] > 0 && possible[LEFT])
-		{
-			--pos1[X];
-			log("Moving left");
-			return;
-		}
-		else if (possible[RIGHT])
-		{
-			++pos1[X];
-			log("Moving right");
-			return;
-		}
-		else
-		{
-			random_move(&NPC.pos);
-		}
-	}
-
-	log("No direction picked. Picking random one");
-	random_move(&NPC.pos);
+	return(FALSE);
 }
 
 #endif

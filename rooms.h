@@ -4,52 +4,106 @@
 #define SYMBOL_DOOR 'H'
 
 #define ROOM_START 0
-#define ROOM_MAZE 1
-#define ROOM_COUNT 2
 
-struct room rooms[ROOM_COUNT];
+void register_room();
+
+struct room rooms[15];
 
 void generate_rooms()
 {
-	int y = 0;
+	register_room(7, NO_NPC, (position){0, 0}, (char *[25]){
+		"+--------------------+",
+		"|     DUNGETEER      |",
+		"+--------------------+",
+		"|                    |",
+		"|                    |",
+		"|Walk into the door> H",
+		"|                    |",
+		"|                    |",
+		"|                    |",
+		"|                    |",
+		"+--------------------+"
+	});
 
-	rooms[ROOM_START].door = 5;
-	rooms[ROOM_START].x_size = 22;
-	rooms[ROOM_START].y_size = 11;
-	rooms[ROOM_START].npc = npcs[RAT];
-	set_pos(rooms[ROOM_START].npc.pos, 3, 9);
-	
-	rooms[ROOM_START].room[y++] = "+--------------------+";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "|                    H";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "|                    |";
-	rooms[ROOM_START].room[y++] = "+--------------------+";
+	register_room(5, RAT, (position){9, 5}, (char *[25]){
+		"+--------------------+",
+		"|                    |",
+		"|                    |",
+		"|                    |",
+		"|                    |",
+		"|                    H",
+		"|                    |",
+		"|                    |",
+		"|                    |",
+		"|                    |",
+		"+--------------------+"
+	});
 
-	y = 0;
+	register_room(5, RAT, (position){16, 5}, (char *[25]){
+		"+--------------------+",
+		"|---#                |",
+		"|#### ############## |",
+		"|   # #              |",
+		"| # # #  ############|",
+		"| # # #  #           H",
+		"|## # #  # ##########|",
+		"|   # #  #           |",
+		"| ### #  ########### |",
+		"|     #              |",
+		"+--------------------+"
+	});
 
-	rooms[ROOM_MAZE].door = 5;
-	rooms[ROOM_MAZE].x_size = 22;
-	rooms[ROOM_MAZE].y_size = 11;
-	rooms[ROOM_MAZE].npc = npcs[RAT];
-	set_pos(rooms[ROOM_MAZE].npc.pos, 16, 5);
-	
-	rooms[ROOM_MAZE].room[y++] = "+--------------------+";
-	rooms[ROOM_MAZE].room[y++] = "|---#                |";
-	rooms[ROOM_MAZE].room[y++] = "|#### ############## |";
-	rooms[ROOM_MAZE].room[y++] = "|   # #              |";
-	rooms[ROOM_MAZE].room[y++] = "| # # #  ############|";
-	rooms[ROOM_MAZE].room[y++] = "| # # #  #           H";
-	rooms[ROOM_MAZE].room[y++] = "|## # #  # ##########|";
-	rooms[ROOM_MAZE].room[y++] = "|   # #  #           |";
-	rooms[ROOM_MAZE].room[y++] = "| ### #  ########### |";
-	rooms[ROOM_MAZE].room[y++] = "|     #              |";
-	rooms[ROOM_MAZE].room[y++] = "+--------------------+";
+	register_room(9, BIG_RAT, (position){15, 2}, (char *[25]){
+		"+--------------------+",
+		"|                    |",
+		"|########            H",
+		"|                    |",
+		"|########  ##########|",
+		"|                    |",
+		"| ###################|",
+		"|                    |",
+		"|################### |",
+		"|                    |",
+		"+--------------------+"
+	});
+
+	register_room(9, T_H, (position){16, 2}, (char *[25]){
+		"+--------------------+",
+		"|                    |",
+		"|        #           |",
+		"|        #           |",
+		"|        #     ######|",
+		"|        #     #     H",
+		"|        #     #     |",
+		"|        #     #     |",
+		"|        #     #     |",
+		"[        #           |",
+		"+--------------------+"
+	});
+}
+
+void register_room(door, npc, npc_pos, room)
+int door, npc;
+position npc_pos;
+char *room[25];
+{
+	static int number = 0;
+	int y;
+
+	rooms[number].door = door;
+	rooms[number].npc = npcs[npc];
+	set_pos(rooms[number].npc.pos, npc_pos.x, npc_pos.y);
+
+	for (y = 0; y < 25 && room[y] != '\0'; ++y)
+	{
+		rooms[number].room[y] = room[y];
+	}
+
+	rooms[number].y_size = y+1;
+	rooms[number].x_size = getlen(room[1]);
+
+	++ROOM_COUNT;
+	++number;
 }
 
 #endif

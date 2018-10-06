@@ -11,8 +11,6 @@ struct dungeon dungeon = {
 void new_room(number)
 int number;
 {
-	int y = 0;
-
 	struct room room = rooms[number];
 
 	dungeon.room_id = number;
@@ -24,7 +22,7 @@ int number;
 
 void show_dungeon()
 {
-	int x, y;
+	int y;
 
 	clear();
 
@@ -33,18 +31,28 @@ void show_dungeon()
 	for (y = 0; y < room.y_size; ++y)
 	{
 		mvprintw(y, 0, "%s", room.room[y]);
-		refresh();
 	}
 
 	attron(COLOR_PAIR(COLOR_GREEN));
-	mvprintw(player.pos[Y], player.pos[X], "%c", '@');
+	mvprintw(player.pos.y, player.pos.x, "%c", '@');
 	attroff(COLOR_PAIR(COLOR_GREEN));
-	refresh();
 
 	if (NPC.id != NO_NPC)
-		mvprintw(NPC.pos[Y], NPC.pos[X], "%c", NPC.symbol);
+	{
+		if (distance(player.pos, NPC.pos) <= NPC.view_range)
+		{
+			attron(COLOR_PAIR(COLOR_RED));
+			mvprintw(NPC.pos.y, NPC.pos.x, "%c", NPC.symbol);
+			attroff(COLOR_PAIR(COLOR_RED));
+		}
+		else
+			mvprintw(NPC.pos.y, NPC.pos.x, "%c", NPC.symbol);
+	}
 
 	print_debug();
+
+	if (NPC.hp > 0)
+		print_debug2();
 
 	refresh();
 }
